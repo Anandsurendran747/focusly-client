@@ -7,13 +7,13 @@ importScripts(
 );
 
 const firebaseConfig = {
-  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
-  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.REACT_APP_FIREBASE_APP_ID,
-  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
+  apiKey: "AIzaSyAgNyEOSSj25eMR09YefVJTv-U1l76WJFM",
+  authDomain: "focusly-anand.firebaseapp.com",
+  projectId: "focusly-anand",
+  storageBucket: "focusly-anand.firebasestorage.app",
+  messagingSenderId: "804864668187",
+  appId: "1:804864668187:web:f9187ed9e9319e12b03ebe",
+  measurementId: "G-2XSE4WCNDY"
 };
 
 const messaging = firebase.messaging();
