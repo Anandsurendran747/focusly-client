@@ -11,6 +11,19 @@ import PrivateRoute from './routes/PrivateRoute';
 import Schedules from './pages/Schedules';
 import { getFCMToken } from './getToken';
 
+export function useInstallPrompt() {
+  const [prompt, setPrompt] = useState(null);
+
+  useEffect(() => {
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      setPrompt(e);
+    });
+  }, []);
+
+  const install = () => prompt?.prompt();
+  return { canInstall: !!prompt, install };
+}
 
 const NAV_ITEMS = [
   { id: 'todos', label: 'Tasks', icon: '✓' },

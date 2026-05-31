@@ -1,6 +1,7 @@
 import React from 'react'
 import { useApp } from '../context/AppContext';
 import {useNavigate} from 'react-router-dom';
+import { useInstallPrompt } from '../App';
 
 const NAV_ITEMS = [
     { id: 'todos', label: 'Tasks', icon: '✓' },
@@ -10,7 +11,9 @@ const NAV_ITEMS = [
 ];
 
 
+
 const Navbar = () => {
+    const { canInstall, install } = useInstallPrompt();
     const navigate = useNavigate();
     const { user, logout, page, setPage } = useApp();
     const getInitials = (name) => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -41,6 +44,7 @@ const Navbar = () => {
                 <div className="user-avatar" title={user.name}>{getInitials(user.name)}</div>
                 <button className="logout-btn" onClick={logout} title="Sign out">↪</button>
             </div>
+            {canInstall && <button onClick={install}>Install App</button>}
         </header>
     )
 }
