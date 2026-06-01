@@ -1,6 +1,6 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { useApp } from '../context/AppContext';
-import {useNavigate} from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useInstallPrompt } from '../App';
 
 const NAV_ITEMS = [
@@ -13,7 +13,38 @@ const NAV_ITEMS = [
 
 
 const Navbar = () => {
-    const { canInstall, install } = useInstallPrompt();
+    const [installPrompt, setInstallPrompt] = useState(null);
+
+    useEffect(() => {
+        // ✅ Check if already captured before component mounted
+        if (window.__installPrompt) {
+            console.log('Found pre-captured prompt');
+            setInstallPrompt(window.__installPrompt);
+            return;
+        }
+
+        // ✅ Otherwise listen for it
+        const handler = (e) => {
+            e.preventDefault();
+            window.__installPrompt = e;
+            setInstallPrompt(e);
+            console.log('Install prompt available: true');
+        };
+
+        window.addEventListener('beforeinstallprompt', handler);
+        return () => window.removeEventListener('beforeinstallprompt', handler);
+    }, []);
+
+    const handleInstall = async () => {
+        if (!installPrompt) return;
+        await installPrompt.prompt();
+        const { outcome } = await installPrompt.userChoice;
+        console.log('User choice:', outcome);
+        if (outcome === 'accepted') {
+            window.__installPrompt = null;
+            setInstallPrompt(null);
+        }
+    };
     const navigate = useNavigate();
     const { user, logout, page, setPage } = useApp();
     const getInitials = (name) => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -44,7 +75,14 @@ const Navbar = () => {
                 <div className="user-avatar" title={user.name}>{getInitials(user.name)}</div>
                 <button className="logout-btn" onClick={logout} title="Sign out">↪</button>
             </div>
-            {canInstall && <button onClick={install}>Install App</button>}
+            {installPrompt && (
+                <button
+                    onClick={handleInstall}
+                    className="install-btn"
+                >
+                    ⬇ Install
+                </button>
+            )}
         </header>
     )
 }

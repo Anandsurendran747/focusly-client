@@ -1,4 +1,4 @@
-import React, { useState,useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import Auth from './pages/Auth';
 import Todos from './pages/Todos';
@@ -11,17 +11,40 @@ import PrivateRoute from './routes/PrivateRoute';
 import Schedules from './pages/Schedules';
 import { getFCMToken } from './getToken';
 
+
 export function useInstallPrompt() {
   const [prompt, setPrompt] = useState(null);
 
   useEffect(() => {
-    window.addEventListener("beforeinstallprompt", (e) => {
+    // Check if it already fired before component mounted
+    if (window.__installPrompt) {
+      console.log("✅ Found early-captured prompt");
+      setPrompt(window.__installPrompt);
+      return;
+    }
+
+    // Otherwise wait for it
+    const handler = (e) => {
       e.preventDefault();
+      window.__installPrompt = e;
       setPrompt(e);
-    });
+    };
+
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
-  const install = () => prompt?.prompt();
+  const install = async () => {
+    if (!prompt) return;
+    await prompt.prompt();
+    const { outcome } = await prompt.userChoice;
+    console.log("User choice:", outcome);
+    if (outcome === "accepted") {
+      window.__installPrompt = null;
+      setPrompt(null);
+    }
+  };
+
   return { canInstall: !!prompt, install };
 }
 
