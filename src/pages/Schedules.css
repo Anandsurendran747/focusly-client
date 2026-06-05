@@ -162,7 +162,7 @@
   border-bottom: 1px solid var(--border);
 }
 
-..schedule-detail-info {
+.schedule-detail-info {
   display: flex;
   flex-direction: column;
   gap: 10px;
