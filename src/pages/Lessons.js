@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import './Lessons.css';
-import { createLesson, deleteLesson, fetchLessons } from '../api';
+import { createLesson, deleteLesson, fetchLessons, updateLesson } from '../api';
 
 const CATEGORIES = ['Life', 'Productivity', 'Health', 'Finance', 'Relationships', 'Career', 'Mindset', 'Tech', 'Other'];
 const CATEGORY_COLORS = {
@@ -12,15 +12,32 @@ const CATEGORY_COLORS = {
 
 const EMOJIS = ['💡', '🔥', '🚀', '🌱', '⚡', '🎯', '🌊', '🧠', '💪', '✨', '🔑', '📌', '🌟', '🎓', '🛠️'];
 
-function AddLessonModal({ onClose, onAdd }) {
+function AddLessonModal({ lesson, onClose, onAdd, onUpdate }) {
   const [form, setForm] = useState({ title: '', category: 'Life', emoji: '💡', content: '' });
+
+  useEffect(() => {
+    if (lesson) {
+      setForm({
+        title: lesson.title || '',
+        category: lesson.category || 'Life',
+        emoji: lesson.emoji || '💡',
+        content: lesson.content || ''
+      });
+    } else {
+      setForm({ title: '', category: 'Life', emoji: '💡', content: '' });
+    }
+  }, [lesson]);
 
   const handleChange = (e) => setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.title.trim() || !form.content.trim()) return;
-    onAdd(form);
+    if (lesson) {
+      onUpdate(lesson._id, form);
+    } else {
+      onAdd(form);
+    }
     onClose();
   };
 
@@ -29,7 +46,7 @@ function AddLessonModal({ onClose, onAdd }) {
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal animate-in">
         <div className="modal-header">
-          <h2>New Lesson</h2>
+          <h2>{lesson ? 'Edit Lesson' : 'New Lesson'}</h2>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
 
@@ -73,7 +90,7 @@ function AddLessonModal({ onClose, onAdd }) {
 
           <div className="modal-actions">
             <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn-primary">Save Lesson</button>
+            <button type="submit" className="btn-primary">{lesson ? 'Update Lesson' : 'Save Lesson'}</button>
           </div>
         </form>
       </div>
@@ -81,7 +98,7 @@ function AddLessonModal({ onClose, onAdd }) {
   );
 }
 
-function LessonCard({ lesson, onDelete }) {
+function LessonCard({ lesson, onDelete, onEdit }) {
   const [expanded, setExpanded] = useState(false);
   const color = CATEGORY_COLORS[lesson.category] || '#a0a0b8';
 
@@ -104,7 +121,10 @@ function LessonCard({ lesson, onDelete }) {
       {expanded && (
         <div className="lesson-body animate-in">
           <p>{lesson.content}</p>
-          <button className="lesson-delete" onClick={() => onDelete(lesson._id)}>Delete</button>
+          <div className="lesson-actions">
+            <button className="lesson-edit" onClick={() => onEdit(lesson)}>Edit</button>
+            <button className="lesson-delete" onClick={() => onDelete(lesson._id)}>Delete</button>
+          </div>
         </div>
       )}
     </div>
@@ -113,6 +133,8 @@ function LessonCard({ lesson, onDelete }) {
 
 export default function Lessons() {
   const [lessons, setLessons] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [editingLesson, setEditingLesson] = useState(null);
 
   useEffect(() => {
     async function getLessons() {
@@ -121,9 +143,18 @@ export default function Lessons() {
     }
     getLessons();
   }, []);
-  const [showModal, setShowModal] = useState(false);
   const [filterCat, setFilterCat] = useState('All');
   const [search, setSearch] = useState('');
+
+  const openNewLessonModal = () => {
+    setEditingLesson(null);
+    setShowModal(true);
+  };
+
+  const handleEditLesson = (lesson) => {
+    setEditingLesson(lesson);
+    setShowModal(true);
+  };
 
   const filtered = lessons.filter(l => {
     if (filterCat !== 'All' && l.category !== filterCat) return false;
@@ -136,6 +167,10 @@ export default function Lessons() {
   const createMyLesson = async (lessonData) => {
     const newLesson = await createLesson(lessonData);
     setLessons(prev => [newLesson, ...prev]);
+  }
+  const updateMyLesson = async (id, lessonData) => {
+    const updatedLesson = await updateLesson(id, lessonData);
+    setLessons(prev => prev.map(l => (l._id === id ? updatedLesson : l)));
   }
   const deleteMyLesson = async (id) => {
     const willDelete = window.confirm("Are you sure you want to delete this lesson?");
@@ -171,7 +206,7 @@ export default function Lessons() {
               <span className="stat-label">Categories</span>
             </div>
           </div>
-          <button className="fab" onClick={() => setShowModal(true)}>
+          <button className="fab" onClick={openNewLessonModal}>
             <span>+</span> New Lesson
           </button>
         </div>
@@ -204,12 +239,12 @@ export default function Lessons() {
             </div>
           ) : (
             filtered.map(lesson => (
-              <LessonCard key={lesson._id} lesson={lesson} onDelete={(id) => deleteMyLesson(id)} />
+              <LessonCard key={lesson._id} lesson={lesson} onDelete={deleteMyLesson} onEdit={handleEditLesson} />
             ))
           )}
         </div>
 
-        {showModal && <AddLessonModal onClose={() => setShowModal(false)} onAdd={(lessonData) => createMyLesson(lessonData)} />}
+        {showModal && <AddLessonModal lesson={editingLesson} onClose={() => { setShowModal(false); setEditingLesson(null); }} onAdd={createMyLesson} onUpdate={updateMyLesson} />}
       </div>
     </div>
   );

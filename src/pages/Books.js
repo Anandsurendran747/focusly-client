@@ -19,14 +19,17 @@ function StarRating({ rating, onRate, readOnly }) {
   );
 }
 
-function AddBookModal({ onClose, onAdd }) {
-  const [form, setForm] = useState({
-    title: '', author: '', genre: '', rating: 4,
-    dateRead: new Date().toISOString().split('T')[0],
-    cover: '📚',
-    description: '',
-    keyTakeaways: ''
-  });
+function AddBookModal({ onClose, onAdd, initialBook, submitLabel = 'Add Book' }) {
+  const [form, setForm] = useState(() => ({
+    title: initialBook?.title || '',
+    author: initialBook?.author || '',
+    genre: initialBook?.genre || '',
+    rating: initialBook?.rating ?? 4,
+    dateRead: initialBook?.dateRead || new Date().toISOString().split('T')[0],
+    cover: initialBook?.cover || '📚',
+    description: initialBook?.description || '',
+    keyTakeaways: initialBook?.keyTakeaways?.join('\n') || ''
+  }));
 
   const COVERS = ['📚', '📖', '📗', '📘', '📙', '📕', '📓', '🔖'];
 
@@ -47,7 +50,7 @@ function AddBookModal({ onClose, onAdd }) {
       <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
         <div className="modal animate-in">
           <div className="modal-header">
-            <h2>Add Book</h2>
+            <h2>{submitLabel === 'Add Book' ? 'Add Book' : 'Edit Book'}</h2>
             <button className="modal-close" onClick={onClose}>✕</button>
           </div>
 
@@ -104,7 +107,7 @@ function AddBookModal({ onClose, onAdd }) {
 
             <div className="modal-actions">
               <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-              <button type="submit" className="btn-primary">Add Book</button>
+              <button type="submit" className="btn-primary">{submitLabel}</button>
             </div>
           </form>
         </div>
@@ -113,7 +116,7 @@ function AddBookModal({ onClose, onAdd }) {
   );
 }
 
-function BookDetail({ book, onClose, onDelete, onUpdate }) {
+function BookDetail({ book, onClose, onDelete, onEdit }) {
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal book-detail animate-in">
@@ -148,9 +151,9 @@ function BookDetail({ book, onClose, onDelete, onUpdate }) {
             </ul>
           </div>
         )}
-        
 
         <div className="book-detail-footer">
+          <button className="btn-secondary" onClick={() => onEdit(book)}>✎ Edit</button>
           <button className="btn-danger" onClick={() => { onDelete(book._id); onClose(); }}>Delete Book</button>
         </div>
 
@@ -178,6 +181,7 @@ export default function Books() {
 
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState(null);
+  const [editingBook, setEditingBook] = useState(null);
   const [search, setSearch] = useState('');
 
   const filtered = books.filter(b =>
@@ -193,6 +197,14 @@ export default function Books() {
     setBooks(prev => [newBook, ...prev]);
     alert('Book added successfully!');
     setShowModal(false);
+  };
+
+  const editBook = async (bookData) => {
+    const updatedBook = { ...editingBook, ...bookData };
+    setBooks(prev => prev.map(b => b._id === updatedBook._id ? updatedBook : b));
+    setSelected(updatedBook);
+    setEditingBook(null);
+    alert('Book updated successfully!');
   };
 
   const deleteMyBook = async (id) => {
@@ -269,10 +281,8 @@ export default function Books() {
         </div>
 
         {showModal && <AddBookModal onClose={() => setShowModal(false)} onAdd={(bookData) => addBook(bookData)} />}
-        {selected && <BookDetail book={selected} onClose={() => setSelected(null)} onDelete={(id) => deleteMyBook(id)} onUpdate={(updatedBook) => {
-          setBooks(prev => prev.map(b => b._id === updatedBook._id ? updatedBook : b));
-          setSelected(null);
-        }} />}
+        {editingBook && <AddBookModal onClose={() => setEditingBook(null)} onAdd={(bookData) => editBook(bookData)} initialBook={editingBook} submitLabel="Save Changes" />}
+        {selected && <BookDetail book={selected} onClose={() => setSelected(null)} onDelete={(id) => deleteMyBook(id)} onEdit={(book) => { setEditingBook(book); setSelected(null); }} />}
       </div>
     </div>
   );

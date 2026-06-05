@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import './Schedules.css';
-import { createSchedule, deleteSchedule, fetchSchedules } from '../api';
+import { createSchedule, deleteSchedule, fetchSchedules, updateSchedule } from '../api';
 
 const PRIORITY_OPTIONS = [
   { value: 'low', label: 'Low', color: '#6af7c4' },
@@ -66,17 +66,34 @@ function MilestoneRow({ milestone, index, onChange, onRemove, canRemove }) {
   );
 }
 
-function AddScheduleModal({ onClose, onAdd }) {
+function ScheduleModal({ initialData, onClose, onSave, title, submitLabel }) {
   const today = new Date().toISOString().split('T')[0];
-  const [form, setForm] = useState({
-    title: '',
-    priority: 'medium',
-    fromDate: today,
-    toDate: today,
-    milestones: [
-      { title: '', description: '', timeFrom: '09:00', timeTo: '10:00' }
-    ]
+  const defaultMilestone = { title: '', description: '', timeFrom: '09:00', timeTo: '10:00' };
+  const normalizeDateValue = (value) => {
+    if (!value) return today;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? today : date.toISOString().split('T')[0];
+  };
+  const getInitialForm = () => ({
+    title: initialData?.title || '',
+    priority: initialData?.priority || 'medium',
+    fromDate: normalizeDateValue(initialData?.fromDate),
+    toDate: normalizeDateValue(initialData?.toDate),
+    milestones: initialData?.milestones?.length
+      ? initialData.milestones.map((milestone) => ({
+          title: milestone.title || '',
+          description: milestone.description || '',
+          timeFrom: milestone.timeFrom || '09:00',
+          timeTo: milestone.timeTo || '10:00',
+        }))
+      : [defaultMilestone],
   });
+
+  const [form, setForm] = useState(getInitialForm);
+
+  useEffect(() => {
+    setForm(getInitialForm());
+  }, [initialData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -110,7 +127,7 @@ function AddScheduleModal({ onClose, onAdd }) {
     if (!form.title.trim()) return;
     if (!form.milestones.every(m => m.title.trim() && m.timeFrom && m.timeTo)) return;
 
-    onAdd({
+    onSave({
       title: form.title.trim(),
       priority: form.priority,
       fromDate: form.fromDate,
@@ -129,7 +146,7 @@ function AddScheduleModal({ onClose, onAdd }) {
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal animate-in schedule-modal">
         <div className="modal-header">
-          <h2>New Schedule</h2>
+          <h2>{title || (initialData ? 'Edit Schedule' : 'New Schedule')}</h2>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
 
@@ -197,7 +214,7 @@ function AddScheduleModal({ onClose, onAdd }) {
 
           <div className="modal-actions">
             <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn-primary">Create Schedule</button>
+            <button type="submit" className="btn-primary">{submitLabel || (initialData ? 'Save Changes' : 'Create Schedule')}</button>
           </div>
         </form>
       </div>
@@ -208,7 +225,7 @@ function AddScheduleModal({ onClose, onAdd }) {
 
 
 
-function ScheduleDetail({ schedule, onClose, onDelete }) {
+function ScheduleDetail({ schedule, onClose, onDelete, onEdit }) {
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal schedule-detail animate-in">
@@ -243,6 +260,9 @@ function ScheduleDetail({ schedule, onClose, onDelete }) {
         </div>
 
         <div className="schedule-detail-footer">
+          <button className="btn-secondary" onClick={() => onEdit(schedule)}>
+            Edit Schedule
+          </button>
           <button className="btn-danger" onClick={() => { onDelete(schedule._id); onClose(); }}>
             Delete Schedule
           </button>
@@ -291,13 +311,36 @@ export default function Schedules() {
     setShowModal(false);
   };
 
+  const [editingSchedule, setEditingSchedule] = useState(null);
+
   const deleteMySchedule = async (id) => {
     const confirmed = window.confirm('Are you sure you want to delete this schedule?');
     if (!confirmed) return;
     await deleteSchedule(id);
     setSchedules((prev) => prev.filter((schedule) => schedule._id !== id));
+    if (selected?._id === id) {
+      setSelected(null);
+    }
     alert('Schedule deleted successfully!');
   };
+
+  const openEditModal = (schedule) => {
+    setSelected(null);
+    setEditingSchedule(schedule);
+  };
+
+  const editSchedule = async (id, scheduleData) => {
+    const updated = await updateSchedule(id, scheduleData);
+    setSchedules((prev) => prev.map((schedule) => (schedule._id === id ? updated : schedule)));
+    if (selected?._id === id) {
+      setSelected(updated);
+    }
+    alert('Schedule updated successfully!');
+    setEditingSchedule(null);
+  };
+
+  
+
 
   return (
     <div>
@@ -375,8 +418,17 @@ export default function Schedules() {
           )}
         </div>
 
-        {showModal && <AddScheduleModal onClose={() => setShowModal(false)} onAdd={addSchedule} />}
-        {selected && <ScheduleDetail schedule={selected} onClose={() => setSelected(null)} onDelete={deleteMySchedule} />}
+        {showModal && <ScheduleModal onClose={() => setShowModal(false)} onSave={addSchedule} title="New Schedule" submitLabel="Create Schedule" />}
+        {editingSchedule && (
+          <ScheduleModal
+            initialData={editingSchedule}
+            onClose={() => setEditingSchedule(null)}
+            onSave={(scheduleData) => editSchedule(editingSchedule._id, scheduleData)}
+            title="Edit Schedule"
+            submitLabel="Save Changes"
+          />
+        )}
+        {selected && <ScheduleDetail schedule={selected} onClose={() => setSelected(null)} onDelete={deleteMySchedule} onEdit={openEditModal} />}
       </div>
     </div>
   );

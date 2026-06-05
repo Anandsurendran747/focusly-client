@@ -109,13 +109,13 @@
   color: var(--danger);
   padding: 5px 12px;
   border-radius: var(--radius-xs);
-  background: rgba(247,106,106,0.08);
-  border: 1px solid rgba(247,106,106,0.2);
+  background: rgba(247, 106, 106, 0.08);
+  border: 1px solid rgba(247, 106, 106, 0.2);
   transition: all var(--transition);
 }
 
 .lesson-delete:hover {
-  background: rgba(247,106,106,0.18);
+  background: rgba(247, 106, 106, 0.18);
 }
 
 /* Emoji picker */
@@ -173,4 +173,28 @@
 
 .category-chip:hover:not(.active) {
   border-color: var(--border-active);
+}
+
+.lesson-edit {
+  display: inline-block;
+  margin-top: 14px;
+  margin-right: 10px;
+  font-size: 0.78rem;
+  color: var(--accent);
+  padding: 5px 12px;
+  border-radius: var(--radius-xs);
+  background: rgba(81, 135, 32, 0.08);
+  border: 1px solid rgba(247, 106, 106, 0.2);
+  transition: all var(--transition);
+}
+
+.lesson-edit label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+.lesson-delete:hover {
+  background: rgba(5, 53, 6, 0.18);
 }
