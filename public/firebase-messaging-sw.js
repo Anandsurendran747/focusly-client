@@ -27,9 +27,15 @@ messaging.onBackgroundMessage((payload) => {
   );
 });
 
-// ─── PWA Caching (merged here) ───────────────────────────
-const CACHE_NAME = 'focusly-v1';
-const urlsToCache = ['/', '/index.html'];
+// ─── PWA Caching ─────────────────────────────────────────
+const CACHE_NAME = 'focusly-v2'; // ✅ bump this on every deploy
+
+// ✅ DO NOT cache index.html — always fetch fresh from network
+const urlsToCache = ['/logo192.png', '/manifest.json'];
+
+self.addEventListener('message', (e) => {
+  if (e.data?.type === 'SKIP_WAITING') self.skipWaiting();
+});
 
 self.addEventListener('install', (e) => {
   console.log('SW installing...');
@@ -52,6 +58,12 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
 
+  // ✅ Always fetch index.html fresh from network — never cache it
+  if (url.pathname === '/' || url.pathname === '/index.html') {
+    e.respondWith(fetch(e.request));
+    return;
+  }
+
   // Skip API calls, Firebase, and non-GET requests
   if (
     e.request.method !== 'GET' ||
@@ -61,6 +73,7 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
+  // ✅ Cache-first for static assets (JS/CSS already have hashed filenames)
   e.respondWith(
     caches.match(e.request).then(res => res || fetch(e.request))
   );

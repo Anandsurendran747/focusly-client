@@ -24,14 +24,28 @@ if ('serviceWorker' in navigator) {
             .then(reg => {
                 console.log('✅ SW registered:', reg);
 
-                reg.onupdatefound = () => {
-                    const newWorker = reg.installing;
-                    newWorker.onstatechange = () => {
-                        if (newWorker.state === 'activated') {
+                const handleNewWorker = (worker) => {
+                    worker.onstatechange = () => {
+                        if (worker.state === 'activated') {
+                            console.log('🔄 New SW activated, reloading...');
                             window.location.reload();
                         }
                     };
                 };
+
+                // ✅ Case 1: update found after registration
+                reg.onupdatefound = () => {
+                    handleNewWorker(reg.installing);
+                };
+
+                // ✅ Case 2: new SW already waiting (page was open during deploy)
+                if (reg.waiting) {
+                    reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                    handleNewWorker(reg.waiting);
+                }
+
+                // ✅ Case 3: check for updates every 60 seconds
+                setInterval(() => reg.update(), 60 * 1000);
             })
             .catch(err => console.error('❌ SW failed:', err));
     });
