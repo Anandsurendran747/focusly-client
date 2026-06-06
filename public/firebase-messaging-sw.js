@@ -28,10 +28,7 @@ messaging.onBackgroundMessage((payload) => {
 });
 
 // ─── PWA Caching ─────────────────────────────────────────
-const CACHE_NAME = 'focusly-v2'; // ✅ bump this on every deploy
-
-// ✅ DO NOT cache index.html — always fetch fresh from network
-const urlsToCache = ['/logo192.png', '/manifest.json'];
+const CACHE_NAME = 'focusly-v3';
 
 self.addEventListener('message', (e) => {
   if (e.data?.type === 'SKIP_WAITING') self.skipWaiting();
@@ -39,42 +36,34 @@ self.addEventListener('message', (e) => {
 
 self.addEventListener('install', (e) => {
   console.log('SW installing...');
-  e.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
-  );
+  // ✅ No precaching at all — avoid addAll errors
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (e) => {
   console.log('SW activated');
   e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
+    // ✅ Nuke ALL old caches unconditionally
+    caches.keys().then(keys => {
+      console.log('Clearing caches:', keys);
+      return Promise.all(keys.map(k => caches.delete(k)));
+    }).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
 
-  // ✅ Always fetch index.html fresh from network — never cache it
-  if (url.pathname === '/' || url.pathname === '/index.html') {
-    e.respondWith(fetch(e.request));
-    return;
-  }
-
-  // Skip API calls, Firebase, and non-GET requests
+  // ✅ Always fetch fresh — no caching at all
   if (
     e.request.method !== 'GET' ||
-    url.origin !== location.origin ||
-    url.pathname.startsWith('/api/')
+    url.origin !== location.origin
   ) {
     return;
   }
 
-  // ✅ Cache-first for static assets (JS/CSS already have hashed filenames)
+  // ✅ Network first for everything — no stale cache ever
   e.respondWith(
-    caches.match(e.request).then(res => res || fetch(e.request))
+    fetch(e.request).catch(() => caches.match(e.request))
   );
 });
